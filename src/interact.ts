@@ -11,7 +11,7 @@
  * To run locally:
  * Build the project: `$ npm run build`
  * Run with node:     `$ node build/src/interact.js <deployAlias>`.
- */
+ */ 
 import fs from 'fs/promises';
 import { Mina, NetworkId, PrivateKey } from 'o1js';
 import { Add } from './Add.js';
