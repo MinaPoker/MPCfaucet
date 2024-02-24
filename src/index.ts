@@ -1,3 +1,3 @@
-import { Add } from './Add.js';
+import { Faucet } from './Faucet.js';
 
-export { Add };
+export { Faucet };
