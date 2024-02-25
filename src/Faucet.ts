@@ -55,6 +55,47 @@ class MPCTokenFaucet extends SmartContract {
     }
 }
 
+/**
+ * Simple token with API flexible enough to handle all our use cases
+ */
+class TokenContract extends BaseTokenContract {
+    @method async init() {
+        super.init();
+        // mint the entire supply to the token account with the same address as this contract
+        /**
+         * we mint the max uint64 of tokens here, so that we can overflow it in tests if we just mint a bit more
+         */
+        let receiver = this.internal.mint({
+            address: this.address,
+            amount: UInt64.MAXINT(),
+        });
+        // assert that the receiving account is new, so this can be only done once
+        receiver.account.isNew.requireEquals(Bool(true));
+        // pay fees for opened account
+        this.balance.subInPlace(Mina.getNetworkConstants().accountCreationFee);
+    }
+
+    /**
+     * for testing only
+     * mint additional tokens to some user, so we can overflow token balances
+     */
+    @method async init2() {
+        let receiver = this.internal.mint({
+            address: addresses.user,
+            amount: UInt64.from(10n ** 6n),
+        });
+        // assert that the receiving account is new, so this can be only done once
+        receiver.account.isNew.requireEquals(Bool(true));
+        // pay fees for opened account
+        this.balance.subInPlace(Mina.getNetworkConstants().accountCreationFee);
+    }
+
+    @method
+    async approveBase(forest: AccountUpdateForest) {
+        this.checkZeroBalanceChange(forest);
+    }
+}
+
 
 const savedKeys = [
     'EKFcUu4FLygkyZR8Ch4F8hxuJps97GCfiMRSWXDP55sgvjcmNGHc',
