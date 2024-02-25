@@ -42,6 +42,17 @@ class MPCTokenFaucet extends SmartContract {
         await this.tokenContract.transfer(deployer, this.self, initialBalance);
         this.faucetBalance.set(initialBalance);
     }
+
+    @method async requestTokens(amount: UInt64) {
+        const sender = addresses.user3;
+        const balance = this.faucetBalance.get();
+        const remainingBalance = balance.sub(amount);
+
+        remainingBalance.assertEquals(balance.sub(amount));
+
+        await this.tokenContract.transfer(this.self, sender, amount);
+        this.faucetBalance.set(remainingBalance);
+    }
 }
 
 
