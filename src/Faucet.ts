@@ -167,6 +167,19 @@ function createDex({
             this.totalSupply.set(l.add(dl));
             return dl;
         }
+
+        async supplyLiquidity(dx: UInt64) {
+            // calculate dy outside circuit
+            let x = Account(this.address, TokenId.derive(this.tokenX)).balance.get();
+            let y = Account(this.address, TokenId.derive(this.tokenY)).balance.get();
+            if (x.value.isConstant() && x.value.equals(0).toBoolean()) {
+                throw Error(
+                    'Cannot call `supplyLiquidity` when reserves are zero. Use `supplyLiquidityBase`.'
+                );
+            }
+            let dy = dx.mul(y).div(x);
+            return await this.supplyLiquidityBase(dx, dy, mainUser);
+        }
     }
 }
 
