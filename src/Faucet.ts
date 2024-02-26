@@ -180,6 +180,18 @@ function createDex({
             let dy = dx.mul(y).div(x);
             return await this.supplyLiquidityBase(dx, dy, mainUser);
         }
+
+        async redeemLiquidity(dl: UInt64, signerPrivateKey: PrivateKey) {
+            // call the token X holder inside a token X-approved callback
+            let sender = signerPrivateKey.toPublicKey(); // unconstrained because redeemLiquidity() requires the signature anyway
+            let tokenX = new TokenContract(this.tokenX);
+            let dexX = new DexTokenHolder(this.address, tokenX.deriveTokenId());
+            let dxdy = await dexX.redeemLiquidity(sender, dl, this.tokenY);
+            let dx = dxdy[0];
+            await tokenX.transfer(dexX.self, sender, dx);
+            return dxdy;
+        }
+
     }
 }
 
