@@ -106,9 +106,66 @@ function createDex({
 
         // Approvable API
 
+        @state(UInt64) totalSupply = State<UInt64>();
+
+
         @method
         async approveBase(forest: AccountUpdateForest) {
             this.checkZeroBalanceChange(forest);
+        }
+
+        @method async supplyLiquidityBase(dx: UInt64, dy: UInt64, signerPrivateKey: PrivateKey): Promise<UInt64> {
+            let user = signerPrivateKey.toPublicKey(); // unconstrained because transfer() requires the signature anyway
+            let tokenX = new TokenContract(this.tokenX);
+            let tokenY = new TokenContract(this.tokenY);
+
+            // get balances of X and Y token
+            let dexXUpdate = AccountUpdate.create(
+                this.address,
+                tokenX.deriveTokenId()
+            );
+            let dexXBalance = dexXUpdate.account.balance.getAndRequireEquals();
+
+            let dexYUpdate = AccountUpdate.create(
+                this.address,
+                tokenY.deriveTokenId()
+            );
+            let dexYBalance = dexYUpdate.account.balance.getAndRequireEquals();
+
+            // assert dy === [dx * y/x], or x === 0
+            let isXZero = dexXBalance.equals(UInt64.zero);
+            let xSafe = Provable.if(isXZero, UInt64.one, dexXBalance);
+            let isDyCorrect = dy.equals(dx.mul(dexYBalance).div(xSafe));
+            isDyCorrect.or(isXZero).assertTrue();
+
+            await tokenX.transfer(user, dexXUpdate, dx);
+            await tokenY.transfer(user, dexYUpdate, dy);
+
+            // calculate liquidity token output simply as dl = dx + dy
+            // => maintains ratio x/l, y/l
+            let dl = dy.add(dx);
+            let userUpdate = this.internal.mint({ address: user, amount: dl });
+            if (lockedLiquiditySlots !== undefined) {
+                /**
+                 * exercise the "timing" (vesting) feature to lock the received liquidity tokens.
+                 * THIS IS HERE FOR TESTING!
+                  **/
+                let amountLocked = dl;
+                userUpdate.account.timing.set({
+                    initialMinimumBalance: amountLocked,
+                    cliffAmount: amountLocked,
+                    cliffTime: UInt32.from(lockedLiquiditySlots),
+                    vestingIncrement: UInt64.zero,
+                    vestingPeriod: UInt32.one,
+                });
+                userUpdate.requireSignature();
+            }
+
+            // update l supply
+            let l = this.totalSupply.get();
+            this.totalSupply.requireEquals(l);
+            this.totalSupply.set(l.add(dl));
+            return dl;
         }
     }
 }
