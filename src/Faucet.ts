@@ -96,6 +96,22 @@ class TokenContract extends BaseTokenContract {
     }
 }
 
+function createDex({
+    lockedLiquiditySlots,
+}: { lockedLiquiditySlots?: number } = {}) {
+    class Dex extends BaseTokenContract {
+        // addresses of token contracts are constants
+        tokenX = addresses.tokenX;
+        tokenY = addresses.tokenY;
+
+        // Approvable API
+
+        @method
+        async approveBase(forest: AccountUpdateForest) {
+            this.checkZeroBalanceChange(forest);
+        }
+    }
+}
 
 const savedKeys = [
     'EKFcUu4FLygkyZR8Ch4F8hxuJps97GCfiMRSWXDP55sgvjcmNGHc',
