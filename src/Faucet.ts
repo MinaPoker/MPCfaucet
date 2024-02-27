@@ -212,6 +212,15 @@ function createDex({
             return dx;
         }
 
+        @method
+        async burnLiquidity(user: PublicKey, dl: UInt64): Promise<UInt64> {
+            // this makes sure there is enough l to burn (user balance stays >= 0), so l stays >= 0, so l was >0 before
+            this.internal.burn({ address: user, amount: dl });
+            let l = this.totalSupply.get();
+            this.totalSupply.requireEquals(l);
+            this.totalSupply.set(l.sub(dl));
+            return l;
+        }
     }
 
     class DexTokenHolder extends SmartContract { }
