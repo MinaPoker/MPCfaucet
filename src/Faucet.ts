@@ -192,7 +192,19 @@ function createDex({
             return dxdy;
         }
 
+        @method
+        async swapX(dx: UInt64, signerPrivateKey: PrivateKey): Promise<UInt64> {
+            let sender = signerPrivateKey.toPublicKey(); // unconstrained because swap() requires the signature anyway
+            let tokenY = new TokenContract(this.tokenY);
+            let dexY = new DexTokenHolder(this.address, tokenY.deriveTokenId());
+            let dy = await dexY.swap(sender, dx, this.tokenX);
+            await tokenY.transfer(dexY.self, sender, dy);
+            return dy;
+        }
+
     }
+
+    class DexTokenHolder extends SmartContract {}
 }
 
 const savedKeys = [
