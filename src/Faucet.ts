@@ -245,6 +245,52 @@ function createDex({
             return [l, dy];
         }
 
+        @method
+        async redeemLiquidity(
+            user: PublicKey,
+            dl: UInt64,
+            otherTokenAddress: PublicKey
+        ): Promise<UInt64x2> {
+            // first call the Y token holder, approved by the Y token contract; this makes sure we get dl, the user's lqXY
+            let tokenY = new TokenContract(otherTokenAddress);
+            let dexY = new DexTokenHolder(this.address, tokenY.deriveTokenId());
+            let result = await dexY.redeemLiquidityPartial(user, dl);
+            let l = result[0];
+            let dy = result[1];
+            await tokenY.transfer(dexY.self, user, dy);
+
+            // in return for dl, we give back dx, the X token part
+            let x = this.account.balance.get();
+            this.account.balance.requireEquals(x);
+            let dx = x.mul(dl).div(l);
+            // just subtract the balance, user gets their part one level higher
+            this.balance.subInPlace(dx);
+
+            return [dx, dy];
+        }
+
+        @method
+        async swap(
+            user: PublicKey,
+            otherTokenAmount: UInt64,
+            otherTokenAddress: PublicKey
+        ): Promise<UInt64> {
+            // we're writing this as if our token === y and other token === x
+            let dx = otherTokenAmount;
+            let tokenX = new TokenContract(otherTokenAddress);
+            // get balances
+            let dexX = AccountUpdate.create(this.address, tokenX.deriveTokenId());
+            let x = dexX.account.balance.getAndRequireEquals();
+            let y = this.account.balance.getAndRequireEquals();
+            // send x from user to us (i.e., to the same address as this but with the other token)
+            await tokenX.transfer(user, dexX, dx);
+            // compute and send dy
+            let dy = y.mul(dx).div(x.add(dx));
+            // just subtract dy balance and let adding balance be handled one level higher
+            this.balance.subInPlace(dy);
+            return dy;
+        }
+
     }
 }
 
