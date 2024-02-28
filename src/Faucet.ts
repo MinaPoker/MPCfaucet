@@ -223,7 +223,29 @@ function createDex({
         }
     }
 
-    class DexTokenHolder extends SmartContract { }
+    class DexTokenHolder extends SmartContract {
+        @method
+        async redeemLiquidityPartial(user: PublicKey, dl: UInt64): Promise<UInt64x2> {
+            // user burns dl, approved by the Dex main contract
+            let dex = new Dex(addresses.dex);
+            let l = await dex.burnLiquidity(user, dl);
+
+            // in return, we give dy back
+            let y = this.account.balance.get();
+            this.account.balance.requireEquals(y);
+            // we can safely divide by l here because the Dex contract logic wouldn't allow burnLiquidity if not l>0
+            let dy = y.mul(dl).div(l);
+            // just subtract the balance, user gets their part one level higher
+            this.balance.subInPlace(dy);
+
+            // be approved by the token owner parent
+            this.self.body.mayUseToken = AccountUpdate.MayUseToken.ParentsOwnToken;
+
+            // return l, dy so callers don't have to walk their child account updates to get it
+            return [l, dy];
+        }
+
+    }
 }
 
 const savedKeys = [
