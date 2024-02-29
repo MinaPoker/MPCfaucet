@@ -1,16 +1,16 @@
 import { expect } from 'expect';
 import { AccountUpdate, Mina, Permissions, TokenId, UInt64, PrivateKey, PublicKey } from 'o1js';
 import { getProfiler } from '../utils/profiler.js';
-import { TokenContract, addresses, createDex, keys, tokenIds } from './dex.js';
+import { TokenContract, addresses, createDex, keys, tokenIds } from './Faucet.js';
 
 let proofsEnabled = false;
 let Local = Mina.LocalBlockchain({
-  proofsEnabled,
-  enforceTransactionLimits: false,
+    proofsEnabled,
+    enforceTransactionLimits: false,
 });
 Mina.setActiveInstance(Local);
 let [{ privateKey: feePayerKey, publicKey: feePayerAddress }] =
-  Local.testAccounts;
+    Local.testAccounts;
 let tx, balances, oldBalances;
 
 console.log('-------------------------------------------------');
@@ -26,8 +26,21 @@ console.log('-------------------------------------------------');
 
 await TokenContract.analyzeMethods();
 if (proofsEnabled) {
-  console.log('compile (token)...');
-  await TokenContract.compile();
+    console.log('compile (token)...');
+    await TokenContract.compile();
 }
 
 await main({ withVesting: false });
+
+// swap out ledger so we can start fresh
+Local = Mina.LocalBlockchain({
+    proofsEnabled,
+    enforceTransactionLimits: false,
+});
+Mina.setActiveInstance(Local);
+[{ privateKey: feePayerKey }] = Local.testAccounts;
+feePayerAddress = feePayerKey.toPublicKey();
+
+await main({ withVesting: true });
+
+console.log('all dex tests were successful! 🎉');

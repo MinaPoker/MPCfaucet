@@ -1,3 +1,3 @@
-import { Faucet } from './Faucet.js';
+import { MPCTokenFaucet } from './Faucet.js';
 
-export { Faucet };
+export { MPCTokenFaucet };
